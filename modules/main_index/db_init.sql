@@ -19,6 +19,7 @@ CREATE TABLE public.ord_number_to_id (
 	inscription_id text NOT NULL,
 	cursed_for_brc20 bool NOT NULL,
 	parent_id text NULL,
+	new_wallet text NULL,
 	block_height int4 NOT NULL,
 	CONSTRAINT ord_number_to_id_pk PRIMARY KEY (id)
 );
@@ -34,6 +35,7 @@ CREATE TABLE public.ord_content (
 	content_type text NOT NULL,
 	metaprotocol text NULL,
 	block_height int4 NOT NULL,
+	delegate_id text NULL,
 	CONSTRAINT ord_content_pk PRIMARY KEY (id)
 );
 CREATE INDEX ord_content_block_height_idx ON public.ord_content USING btree (block_height);

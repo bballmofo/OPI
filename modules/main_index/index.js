@@ -205,6 +205,7 @@ async function main_index() {
     try {
       let version_string = execSync(ord_version_cmd).toString()
       console.log("ord version: " + version_string)
+      console.log("ord version: " + ord_index_cmd)
       if (!version_string.includes(ORD_VERSION)) {
         console.error("ord version mismatch, please recompile ord via 'cargo build --release'.")
         process.exit(1)
@@ -251,6 +252,7 @@ async function main_index() {
         console.warn("Block repeating, possible reorg!!")
         let blockhash = parts[3].trim()
         let blockhash_db_q = await db_pool.query("select block_hash from block_hashes where block_height = $1;", [block_height])
+        console.log(blockhash_db_q.rows)
         if (blockhash_db_q.rows[0].block_hash != blockhash) {
           let reorg_st_tm = +(new Date())
           console.error("Reorg detected at block_height " + block_height)
@@ -344,10 +346,11 @@ async function main_index() {
 
     let ord_sql_st_tm = +(new Date())
 
-    let sql_query_insert_ord_number_to_id = `INSERT into ord_number_to_id (inscription_number, inscription_id, cursed_for_brc20, parent_id, block_height) values ($1, $2, $3, $4, $5);`
+    let sql_query_insert_ord_number_to_id = `INSERT into ord_number_to_id (inscription_number, inscription_id, cursed_for_brc20, parent_id, new_wallet, block_height) values ($1, $2, $3, $4, $5, $6);`
     let sql_query_insert_transfer = `INSERT into ord_transfers (id, inscription_id, block_height, old_satpoint, new_satpoint, new_pkScript, new_wallet, sent_as_fee, new_output_value) values ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
-    let sql_query_insert_content = `INSERT into ord_content (inscription_id, content, content_type, metaprotocol, block_height) values ($1, $2, $3, $4, $5);`
-    let sql_query_insert_text_content = `INSERT into ord_content (inscription_id, text_content, content_type, metaprotocol, block_height) values ($1, $2, $3, $4, $5);`
+    let sql_query_insert_content = `INSERT into ord_content (inscription_id, content, content_type, metaprotocol, delegate_id, block_height) values ($1, $2, $3, $4, $5, $6);`
+    let sql_query_insert_text_content = `INSERT into ord_content (inscription_id, text_content, content_type, metaprotocol,delegate_id, block_height) values ($1, $2, $3, $4, $5, $6);`
+    let sql_query_update_ord_wallet_of_id = `UPDATE ord_number_to_id SET new_wallet = ($1) WHERE inscription_id = ($2);`
     
     let ord_sql_query_count = 0
     let new_inscription_count = 0
@@ -380,6 +383,7 @@ async function main_index() {
 
       let parts = l.split(';')
       if (parts[0] != "cmd") { continue }
+      // console.log(parts)
 
       if (running_promises.length > promise_limit) {
         await Promise.all(running_promises)
@@ -395,7 +399,7 @@ async function main_index() {
           if (block_height > current_height) {
             let parent = parts[7]
             if (parent == "") parent = null
-            running_promises.push(execute_on_db(sql_query_insert_ord_number_to_id, [parseInt(parts[4]), parts[5], parts[6] == "1", parent, block_height]))
+            running_promises.push(execute_on_db(sql_query_insert_ord_number_to_id, [parseInt(parts[4]), parts[5], parts[6] == "1", parent, wallet_from_pkscript(parts[8], network), block_height]))
             new_inscription_count += 1
             ord_sql_query_count += 1
           }
@@ -434,22 +438,38 @@ async function main_index() {
         else if (parts[3] == "content") {
           if (block_height > current_height) {
             // get string after 7th semicolon
-            let content = parts.slice(8).join(';')
+            let content = parts.slice(9).join(';')
+            let delegate_id = parts[8]
+            if (delegate_id == "") delegate_id = null
+
             if (parts[5] == 'true') { // JSON
               if (!content.includes('\\u0000')) {
-                running_promises.push(execute_on_db(sql_query_insert_content, [parts[4], content, parts[6], parts[7], block_height]))
+                // console.log(1111111,[parts[4], content, parts[6], parts[7], parts[9], block_height])
+                running_promises.push(execute_on_db(sql_query_insert_content, [parts[4], content, parts[6], parts[7], delegate_id, block_height]))
                 ord_sql_query_count += 1
               } else {
-                running_promises.push(execute_on_db(sql_query_insert_text_content, [parts[4], content, parts[6], parts[7], block_height]))
+                // console.log(2222222, [parts[4], content, parts[6], parts[7], parts[9], block_height])
+                running_promises.push(execute_on_db(sql_query_insert_text_content, [parts[4], content, parts[6], parts[7], delegate_id, block_height]))
                 ord_sql_query_count += 1
                 save_error_log("--------------------------------")
                 save_error_log("Error parsing JSON: " + content)
                 save_error_log("On inscription: " + parts[4])
               }
             } else {
-              running_promises.push(execute_on_db(sql_query_insert_text_content, [parts[4], content, parts[6], parts[7], block_height]))
+              // console.log(3333333, [parts[4], content, parts[6], parts[7], parts[9], block_height])
+              running_promises.push(execute_on_db(sql_query_insert_text_content, [parts[4], content, parts[6], parts[7], delegate_id, block_height]))
               ord_sql_query_count += 1
             }
+          }
+        }
+      }
+      else if (parts[2] == "update") {
+        if (parts[3] == "transfer") {
+          if (block_height > current_height) {
+            // console.log("update", [parts[4], parts[8], wallet_from_pkscript(parts[8], network), block_height])
+            running_promises.push(execute_on_db(sql_query_update_ord_wallet_of_id, [wallet_from_pkscript(parts[8], network), parts[4]]))
+            new_inscription_count += 1
+            ord_sql_query_count += 1
           }
         }
       }

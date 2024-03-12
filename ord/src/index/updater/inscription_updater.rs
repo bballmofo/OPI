@@ -557,6 +557,13 @@ impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
           .unwrap();
         let is_json_or_text = entry.is_json_or_text;
         let txcnt_limit = entry.txcnt_limit;
+        if is_json_or_text {
+          self.write_to_file(format!("cmd;{0};update;transfer;{1};{old_satpoint};{new_satpoint};{send_to_coinbase};{2};{3}", 
+                    self.height, flotsam.inscription_id, 
+                    hex::encode(new_script_pubkey.unwrap_or(&ScriptBuf::new()).clone().into_bytes()), 
+                    new_output_value.unwrap_or(&0)), false)?;
+
+        }
         if is_json_or_text && txcnt_of_inscr <= txcnt_limit.into() { // only track non-cursed and first two transactions
           self.write_to_file(format!("cmd;{0};insert;transfer;{1};{old_satpoint};{new_satpoint};{send_to_coinbase};{2};{3}", 
                     self.height, flotsam.inscription_id, 
@@ -608,28 +615,56 @@ impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
         let inscription_metaprotocol = inscription.metaprotocol;
         let json_txcnt_limit = Self::get_json_tx_limit(&inscription_content);
         let is_json = json_txcnt_limit > 0;
+        let inscription_delegate = inscription.delegate;
+
         let is_text = Self::is_text(&inscription_content_type);
         let is_json_or_text = is_json || is_text;
         
-        let txcnt_limit = if !unbound && is_json_or_text {
-          self.write_to_file(format!("cmd;{0};insert;number_to_id;{1};{2};{3};{4}", self.height, inscription_number, flotsam.inscription_id, if cursed_for_brc20 {"1"} else {"0"}, parent.map(|p| p.to_string()).unwrap_or(String::from(""))), false)?;
+        let txcnt_limit = if !unbound && is_json_or_text { 
+          self.write_to_file(format!("cmd;{0};insert;number_to_id;{1};{2};{3};{4};{5}",
+            self.height, inscription_number, flotsam.inscription_id, if cursed_for_brc20 {"1"} else {"0"}, parent.map(|p| p.to_string()).unwrap_or(String::from("")), hex::encode(new_script_pubkey.unwrap_or(&ScriptBuf::new()).clone().into_bytes())), false)?;
           // write content as minified json
           if is_json {
             let inscription_content_json = serde_json::from_slice::<Value>(&(inscription_content.unwrap())).unwrap();
             let inscription_content_json_str = serde_json::to_string(&inscription_content_json).unwrap();
             let inscription_content_type_str = hex::encode(inscription_content_type.unwrap_or(Vec::new()));
             let inscription_metaprotocol_str = hex::encode(inscription_metaprotocol.unwrap_or(Vec::new()));
-            self.write_to_file(format!("cmd;{0};insert;content;{1};{2};{3};{4};{5}", 
-                                    self.height, flotsam.inscription_id, is_json, inscription_content_type_str, inscription_metaprotocol_str, inscription_content_json_str), false)?;
-            
+
+            let inscription_delegate_str = hex::encode(inscription_delegate.unwrap_or(Vec::new()));
+            // let input = "b5af1a2270db4b6e32a64cdd8f471db7fbac40240b83a8bee555b0051591883e";
+            // 将十六进制字符串解码为字节序列
+            let delegate_bytes = hex::decode(inscription_delegate_str).unwrap();
+            // 对字节序列进行逆序操作
+            let reversed_delegate_bytes: Vec<u8> = delegate_bytes.into_iter().rev().collect();
+            // 将逆序后的字节序列重新编码为十六进制字符串
+            let mut delegate_id_str = hex::encode(reversed_delegate_bytes);
+            if !delegate_id_str.is_empty() {
+              delegate_id_str.push_str("i0");
+            }
+
+
+            self.write_to_file(format!("cmd;{0};insert;content;{1};{2};{3};{4};{5};{6}", 
+                                    self.height, flotsam.inscription_id, is_json, inscription_content_type_str, inscription_metaprotocol_str, delegate_id_str, inscription_content_json_str), false)?;
             json_txcnt_limit
           } else {
             let inscription_content_hex_str = hex::encode(inscription_content.unwrap_or(Vec::new()));
             let inscription_content_type_str = hex::encode(inscription_content_type.unwrap_or(Vec::new()));
             let inscription_metaprotocol_str = hex::encode(inscription_metaprotocol.unwrap_or(Vec::new()));
-            self.write_to_file(format!("cmd;{0};insert;content;{1};{2};{3};{4};{5}", 
-                                    self.height, flotsam.inscription_id, is_json, inscription_content_type_str, inscription_metaprotocol_str, inscription_content_hex_str), false)?;
-            
+
+            let inscription_delegate_str = hex::encode(inscription_delegate.unwrap_or(Vec::new()));
+            // let input = "b5af1a2270db4b6e32a64cdd8f471db7fbac40240b83a8bee555b0051591883e";
+            // 将十六进制字符串解码为字节序列
+            let delegate_bytes = hex::decode(inscription_delegate_str).unwrap();
+            // 对字节序列进行逆序操作
+            let reversed_delegate_bytes: Vec<u8> = delegate_bytes.into_iter().rev().collect();
+            // 将逆序后的字节序列重新编码为十六进制字符串
+            let mut delegate_id_str = hex::encode(reversed_delegate_bytes);
+            if !delegate_id_str.is_empty() {
+              delegate_id_str.push_str("i0");
+            }
+
+            self.write_to_file(format!("cmd;{0};insert;content;{1};{2};{3};{4};{5};{6}", 
+                                    self.height, flotsam.inscription_id, is_json, inscription_content_type_str, inscription_metaprotocol_str, delegate_id_str, inscription_content_hex_str), false)?;
             TX_LIMITS["default"]
           }
         } else {
