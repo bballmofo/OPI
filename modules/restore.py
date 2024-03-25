@@ -34,6 +34,7 @@ def get_yn(question, default=None):
 index_brc20 = get_yn("Will you index brc20", True)
 index_bitmap = get_yn("Will you index bitmap", True)
 index_sns = get_yn("Will you index sns", True)
+index_brc6699 = get_yn("Will you index brc6699", True)
 
 if not os.path.isfile('main_index/.env'):
   print("main_index/.env file not found, please run reset_init.py from main_index folder")
@@ -50,6 +51,9 @@ if index_bitmap and not os.path.isfile('bitmap_index/.env'):
 if index_sns and not os.path.isfile('sns_index/.env'):
   print("sns_index/.env file not found, please run reset_init.py from sns_index folder")
   exit()
+
+if index_brc6699 and not os.path.isfile('brc6699_index/.env'):
+  print("brc6699_index/.env file not found, please run reset_init.py from brc6699_index folder")
 
 env = dotenv_values(dotenv_path='main_index/.env')
 db_user_main = env.get("DB_USER") or "postgres"
@@ -151,6 +155,29 @@ if index_sns:
     conn_sns.close()
   except:
     print("Error connecting to sns db, check sns_index/.env file")
+    exit()
+
+if index_brc6699:
+  env = dotenv_values(dotenv_path='brc6699_index/.env')
+  db_user_brc6699 = env.get("DB_USER") or "postgres"
+  db_host_brc6699 = env.get("DB_HOST") or "localhost"
+  db_port_brc6699 = int(env.get("DB_PORT") or "5432")
+  db_database_brc6699 = env.get("DB_DATABASE") or "postgres"
+  db_password_brc6699 = env.get("DB_PASSWD")
+
+  try:
+    conn_brc6699 = psycopg2.connect(
+      host=db_host_brc6699,
+      port=db_port_brc6699,
+      database=db_database_brc6699,
+      user=db_user_brc6699,
+      password=db_password_brc6699)
+    conn_brc6699.autocommit = True
+    cur_brc6699 = conn_brc6699.cursor()
+    cur_brc6699.close()
+    conn_brc6699.close()
+  except:
+    print("Error connecting to brc6699 db, check brc6699_index/.env file")
     exit()
 
 download_only = not get_yn("Do you want to restore databases (y) or download backups only (n)?", True)

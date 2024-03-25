@@ -35,6 +35,7 @@ var chain_folder = process.env.BITCOIN_CHAIN_FOLDER || "~/.bitcoin/"
 var bitcoin_rpc_user = process.env.BITCOIN_RPC_USER || ""
 var bitcoin_rpc_password = process.env.BITCOIN_RPC_PASSWD || ""
 var bitcoin_rpc_url = process.env.BITCOIN_RPC_URL || ""
+var index_brc6699 = process.env.INDEX_BRC6699 || "false"
 
 var ord_binary = process.env.ORD_BINARY || "ord"
 var ord_folder = process.env.ORD_FOLDER || "../../ord/target/release/"
@@ -351,6 +352,7 @@ async function main_index() {
     let sql_query_insert_content = `INSERT into ord_content (inscription_id, content, content_type, metaprotocol, delegate_id, block_height) values ($1, $2, $3, $4, $5, $6);`
     let sql_query_insert_text_content = `INSERT into ord_content (inscription_id, text_content, content_type, metaprotocol,delegate_id, block_height) values ($1, $2, $3, $4, $5, $6);`
     let sql_query_update_ord_wallet_of_id = `UPDATE ord_number_to_id SET new_wallet = ($1) WHERE inscription_id = ($2);`
+    let sql_query_update_brc6699_collections = `UPDATE brc6699_collections SET (pkscript, wallet ) = ($1, $2) WHERE inscription_id = ($3);`
     
     let ord_sql_query_count = 0
     let new_inscription_count = 0
@@ -468,8 +470,11 @@ async function main_index() {
           if (block_height > current_height) {
             // console.log("update", [parts[4], parts[8], wallet_from_pkscript(parts[8], network), block_height])
             running_promises.push(execute_on_db(sql_query_update_ord_wallet_of_id, [wallet_from_pkscript(parts[8], network), parts[4]]))
-            new_inscription_count += 1
             ord_sql_query_count += 1
+            if (index_brc6699 == "true") {
+              running_promises.push(execute_on_db(sql_query_update_brc6699_collections, [parts[8], wallet_from_pkscript(parts[8], network), parts[4]]))
+              ord_sql_query_count += 1
+            }
           }
         }
       }

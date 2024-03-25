@@ -29,6 +29,7 @@ if init_env:
   ORD_BINARY="./ord"
   ORD_FOLDER="../../ord/target/release/"
   ORD_DATADIR="."
+  INDEX_BRC6699="false"
   NETWORK_TYPE="mainnet"
   print("Initialising .env file")
   print("leave blank to use default values")
@@ -76,6 +77,11 @@ if init_env:
   res = input("Ord datadir (relative to ord folder) (Default: .) leave default if repository folder structure hasn't been changed: ")
   if res != '':
     ORD_DATADIR = res
+
+  res = input("Will you index brc6699 (true/false) (Default: false): ")
+  if res == 'true':
+    INDEX_BRC6699 = res
+
   res = input("Network type (Default: mainnet) options: mainnet, testnet, signet, regtest: ")
   if res != '':
     NETWORK_TYPE = res
@@ -95,6 +101,7 @@ if init_env:
   f.write("ORD_BINARY=\"" + ORD_BINARY + "\"\n")
   f.write("ORD_FOLDER=\"" + ORD_FOLDER + "\"\n")
   f.write("ORD_DATADIR=\"" + ORD_DATADIR + "\"\n")
+  f.write("INDEX_BRC6699=\"" + INDEX_BRC6699 + "\"\n")
   f.write("NETWORK_TYPE=\"" + NETWORK_TYPE + "\"\n")
   f.close()
 
@@ -144,6 +151,17 @@ for sql in sqls:
     cur.execute(sql)
 
 sqls = open('db_init.sql', 'r').read().split(';')
+for sql in sqls:
+  if sql.strip() != '':
+    cur.execute(sql)
+
+## reset brc6699 db
+sqls = open('../brc6699_index/db_reset.sql', 'r').read().split(';')
+for sql in sqls:
+  if sql.strip() != '':
+    cur.execute(sql)
+
+sqls = open('../brc6699_index/db_init.sql', 'r').read().split(';')
 for sql in sqls:
   if sql.strip() != '':
     cur.execute(sql)

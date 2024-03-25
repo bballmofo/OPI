@@ -220,6 +220,13 @@ def get_inscription_address_by_id(inscription_id):
   # except:
   #   return None
 
+def is_minted_or_invalid(inscription_id):
+  global event_types
+  cur.execute('''select coalesce(sum(case when event_type = %s then 1 else 0 end), 0) as mint_cnt
+                        from brc6699_events where inscription_id = %s;''', (event_types["mint-inscribe"],  inscription_id,))
+  row = cur.fetchall()[0]
+  return row[0] == 1
+
 def is_used_or_invalid(inscription_id):
   global event_types
   cur.execute('''select coalesce(sum(case when event_type = %s then 1 else 0 end), 0) as inscr_cnt,
@@ -523,7 +530,7 @@ def index_block(block_height, current_block_hash):
                               ORDER BY ot.id asc;''', (block_height,))
   transfers = cur_metaprotocol.fetchall()
   
-  cur_metaprotocol.execute('''SELECT ot.id, ot.inscription_id, ot.old_satpoint, ot.new_pkscript, ot.new_wallet, ot.sent_as_fee, oc."content", oc.content_type, oc.delegate_id
+  cur_metaprotocol.execute('''SELECT ot.inscription_id, ot.old_satpoint, ot.new_pkscript, ot.new_wallet, ot.sent_as_fee, oc."content", oc.content_type, oc.delegate_id
                               FROM ord_transfers ot
                               LEFT JOIN ord_content oc ON ot.inscription_id = oc.inscription_id
                               LEFT JOIN ord_number_to_id onti ON ot.inscription_id = onti.inscription_id
@@ -641,8 +648,9 @@ def index_block(block_height, current_block_hash):
       print(idx, '/', len(transfers))
     
     inscr_id, old_satpoint, new_pkScript, new_addr, sent_as_fee, js, content_type, delegate_id = transfer
-    # print(transfer)
+    print("==========",transfer)
     
+    if is_minted_or_invalid(inscr_id): continue ## already used or invalid
     if sent_as_fee and old_satpoint == '': continue ## inscribed as fee
 
     # print("mint===transfer==", transfer)
