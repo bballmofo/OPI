@@ -388,7 +388,7 @@ def mint_inscribe(block_height, inscription_id, minted_pkScript, minted_wallet, 
   cur.execute('''insert into brc6699_events (event_type, block_height, inscription_id, event)
     values (%s, %s, %s, %s) returning id;''', (event_types["mint-inscribe"], block_height, inscription_id, json.dumps(event)))
   event_id = cur.fetchone()[0]
-  cur.execute('''update brc6699_tickers set remaining_supply = remaining_supply - %s where tick = %s;''', (amount, tick))
+  cur.execute('''update brc6699_tickers set remaining_supply = remaining_supply - %s where tick = %s and max_supply is not null;''', (amount, tick))
 
   last_balance = get_last_balance(minted_pkScript, tick)
   last_balance["overall_balance"] += amount
@@ -582,14 +582,18 @@ def index_block(block_height, current_block_hash):
     if js["op"] == 'deploy' and old_satpoint == '':
       if "id" not in js: continue ## invalid inscription
       deploy_delegate_id = js["id"]
-      #todo 检验id在当前部署者的地址上
+      #check deploy own inscription
       ins_address = get_inscription_address_by_id(deploy_delegate_id)
-      print("========,", ins_address, new_addr)
+      # print("========,", ins_address, new_addr)
       if ins_address is None: continue
       if ins_address != new_addr: continue
 
-      if "max" not in js: continue ## invalid inscription
       if tick in ticks: continue ## already deployed
+      # no max means unlimited supply
+      if "max" not in js:
+        max_supply = None
+      else:
+        max_supply = js["max"]
       # 精度为1
       decimals = 1
       if "dec" in js:
@@ -597,13 +601,12 @@ def index_block(block_height, current_block_hash):
         else:
           decimals = int(js["dec"])
       if decimals > 1: continue ## invalid decimals
-      max_supply = js["max"]
       print('==========', js)
-      if not is_positive_number_with_dot(max_supply): continue
-      else:
-        max_supply = get_number_extended_to_1_decimals(max_supply, decimals)
-        if max_supply is None: continue ## invalid max supply
-        if max_supply > (2**64-1) * (10**1) or max_supply <= 0: continue ## invalid max supply
+      if max_supply is not None:
+        if not is_positive_number_with_dot(max_supply): continue
+        else:
+          max_supply = get_number_extended_to_1_decimals(max_supply, decimals)
+          if max_supply > (2**64-1) * (10**1) or max_supply <= 0: continue ## invalid max supply
 
       limit_mint_count = 1
       limit_mint_block = None
@@ -661,7 +664,7 @@ def index_block(block_height, current_block_hash):
       ticker = cur.fetchone()
       tick, height_limit, remaining_supply, limit_mint_count, limit_mint_block = ticker
       mint_count = brc6699_minted_count_map.get(tick,0)
-      if remaining_supply <= 0: continue # mint ended
+      if remaining_supply and remaining_supply <= 0: continue # mint ended
       if height_limit and block_height > height_limit: continue # mint ended
       if not limit_mint_count and not limit_mint_block: continue #invalid
       if limit_mint_block:
@@ -672,7 +675,7 @@ def index_block(block_height, current_block_hash):
         pass
 
       amount = 1
-      if amount > remaining_supply:
+      if remaining_supply and amount > remaining_supply:
         amount = remaining_supply
 
       mint_inscribe(block_height, inscr_id, new_pkScript,new_addr, tick, amount)
