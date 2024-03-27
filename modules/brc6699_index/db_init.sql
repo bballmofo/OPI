@@ -26,6 +26,7 @@ CREATE INDEX brc6699_historic_balances_wallet_idx ON public.brc6699_historic_bal
 
 CREATE TABLE public.brc6699_events (
 	id bigserial NOT NULL,
+	tick varchar(69) NOT NULL,
 	event_type int4 NOT NULL,
 	block_height int4 NOT NULL,
 	inscription_id text NOT NULL,
@@ -33,6 +34,7 @@ CREATE TABLE public.brc6699_events (
 	CONSTRAINT brc6699_events_pk PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX brc6699_events_event_type_inscription_id_idx ON public.brc6699_events USING btree (event_type, inscription_id);
+CREATE INDEX brc6699_events_tick_idx ON public.brc6699_events USING btree (tick);
 CREATE INDEX brc6699_events_block_height_idx ON public.brc6699_events USING btree (block_height);
 CREATE INDEX brc6699_events_event_type_idx ON public.brc6699_events USING btree (event_type);
 CREATE INDEX brc6699_events_inscription_id_idx ON public.brc6699_events USING btree (inscription_id);

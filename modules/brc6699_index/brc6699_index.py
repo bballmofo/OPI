@@ -362,8 +362,8 @@ def deploy_inscribe(block_height, inscription_id, delegate_id, deployer_pkScript
     "limit_mint_block": str(limit_mint_block)
   }
   block_events_str += get_event_str(event, "deploy-inscribe", inscription_id) + EVENT_SEPARATOR
-  cur.execute('''insert into brc6699_events (event_type, block_height, inscription_id, event)
-    values (%s, %s, %s, %s);''', (event_types["deploy-inscribe"], block_height, inscription_id, json.dumps(event)))
+  cur.execute('''insert into brc6699_events (tick, event_type, block_height, inscription_id, event)
+    values (%s, %s, %s, %s, %s);''', (tick, event_types["deploy-inscribe"], block_height, inscription_id, json.dumps(event)))
   
   print("=====", tick, max_supply, decimals, limit_mint_count, limit_mint_block, max_supply, block_height)
   cur.execute('''insert into brc6699_tickers (tick, delegate_id,inscription_id, height, max_supply, decimals, limit_mint_count, limit_mint_block, remaining_supply, block_height)
@@ -385,8 +385,8 @@ def mint_inscribe(block_height, inscription_id, minted_pkScript, minted_wallet, 
     "amount": str(amount)
   }
   block_events_str += get_event_str(event, "mint-inscribe", inscription_id) + EVENT_SEPARATOR
-  cur.execute('''insert into brc6699_events (event_type, block_height, inscription_id, event)
-    values (%s, %s, %s, %s) returning id;''', (event_types["mint-inscribe"], block_height, inscription_id, json.dumps(event)))
+  cur.execute('''insert into brc6699_events (tick, event_type, block_height, inscription_id, event)
+    values (%s, %s, %s, %s, %s) returning id;''', (tick, event_types["mint-inscribe"], block_height, inscription_id, json.dumps(event)))
   event_id = cur.fetchone()[0]
   cur.execute('''update brc6699_tickers set remaining_supply = remaining_supply - %s where tick = %s and max_supply is not null;''', (amount, tick))
 
@@ -417,8 +417,8 @@ def transfer_inscribe(block_height, inscription_id, source_pkScript, source_wall
     "amount": str(amount)
   }
   block_events_str += get_event_str(event, "transfer-inscribe", inscription_id) + EVENT_SEPARATOR
-  cur.execute('''insert into brc6699_events (event_type, block_height, inscription_id, event)
-    values (%s, %s, %s, %s) returning id;''', (event_types["transfer-inscribe"], block_height, inscription_id, json.dumps(event)))
+  cur.execute('''insert into brc6699_events (tick, event_type, block_height, inscription_id, event)
+    values (%s, %s, %s, %s, %s) returning id;''', (tick, event_types["transfer-inscribe"], block_height, inscription_id, json.dumps(event)))
   event_id = cur.fetchone()[0]
   
   last_balance = get_last_balance(source_pkScript, tick)
@@ -449,8 +449,8 @@ def transfer_transfer_normal(block_height, inscription_id, spent_pkScript, spent
     "using_tx_id": str(using_tx_id)
   }
   block_events_str += get_event_str(event, "transfer-transfer", inscription_id) + EVENT_SEPARATOR
-  cur.execute('''insert into brc6699_events (event_type, block_height, inscription_id, event)
-    values (%s, %s, %s, %s) returning id;''', (event_types["transfer-transfer"], block_height, inscription_id, json.dumps(event)))
+  cur.execute('''insert into brc6699_events (tick, event_type, block_height, inscription_id, event)
+    values (%s, %s, %s, %s, %s) returning id;''', (tick, event_types["transfer-transfer"], block_height, inscription_id, json.dumps(event)))
   event_id = cur.fetchone()[0]
   
   last_balance = get_last_balance(source_pkScript, tick)
@@ -488,8 +488,8 @@ def transfer_transfer_spend_to_fee(block_height, inscription_id, tick, amount, u
     "using_tx_id": str(using_tx_id)
   }
   block_events_str += get_event_str(event, "transfer-transfer", inscription_id) + EVENT_SEPARATOR
-  cur.execute('''insert into brc6699_events (event_type, block_height, inscription_id, event)
-    values (%s, %s, %s, %s) returning id;''', (event_types["transfer-transfer"], block_height, inscription_id, json.dumps(event)))
+  cur.execute('''insert into brc6699_events (tick, event_type, block_height, inscription_id, event)
+    values (%s, %s, %s, %s, %s) returning id;''', (tick, event_types["transfer-transfer"], block_height, inscription_id, json.dumps(event)))
   event_id = cur.fetchone()[0]
   
   last_balance = get_last_balance(source_pkScript, tick)
