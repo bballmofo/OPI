@@ -9,6 +9,7 @@ CREATE UNIQUE INDEX grc20_block_hashes_block_height_idx ON public.grc20_block_ha
 
 
 CREATE TABLE public.grc20_events ( id bigserial NOT NULL,
+																																			tick text NOT NULL,
 																																			event_type int4 NOT NULL,
 																																			block_height int4 NOT NULL,
 																																			inscription_id text NOT NULL,

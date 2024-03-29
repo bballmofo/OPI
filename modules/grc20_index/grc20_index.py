@@ -51,7 +51,7 @@ network_type = os.getenv("NETWORK_TYPE") or "mainnet"
 
 first_inscription_heights = {
   'mainnet': 767430,
-  'testnet': 2413343,
+  'testnet': 2581400,
   'signet': 188171,
   'regtest': 0,
 }
@@ -59,7 +59,7 @@ first_inscription_height = first_inscription_heights[network_type]
 
 first_grc20_heights = {
   'mainnet': 836510,
-  'testnet': 25838111,
+  'testnet': 2581400,
   'signet': 188171,
   'regtest': 0,
 }
@@ -232,7 +232,7 @@ def reset_caches():
   print("Ticks refreshed in " + str(time.time() - sttm) + " seconds")
 
 block_start_max_event_id = None
-grc20_events_insert_sql = '''insert into grc20_events (id, event_type, block_height, inscription_id, event) values '''
+grc20_events_insert_sql = '''insert into grc20_events (id, tick, event_type, block_height, inscription_id, event) values '''
 grc20_events_insert_cache = []
 grc20_tickers_insert_sql = '''insert into grc20_tickers (tick, original_tick, max_supply, decimals, limit_per_mint, remaining_supply, block_height, is_self_mint, deploy_inscription_id) values '''
 grc20_tickers_remaining_supply_update_sql = '''update grc20_tickers set tick_remaining_supply = tick_remaining_supply - %s  where tick = %s;'''
@@ -256,7 +256,7 @@ def mint_inscribe(block_height, inscription_id, minted_pkScript, minted_wallet, 
   }
   block_events_str += get_event_str(event, "mint-inscribe", inscription_id) + EVENT_SEPARATOR
   event_id = block_start_max_event_id + len(grc20_events_insert_cache) + 1
-  grc20_events_insert_cache.append((event_id, event_types["mint-inscribe"], block_height, inscription_id, json.dumps(event)))
+  grc20_events_insert_cache.append((event_id, tick, event_types["mint-inscribe"], block_height, inscription_id, json.dumps(event)))
   grc20_tickers_remaining_supply_update_cache[tick] = grc20_tickers_remaining_supply_update_cache.get(tick,0) + amount
   if tick not in grc20_code_remaining_supply_update_cache:
     grc20_code_remaining_supply_update_cache[tick] = {}
